@@ -278,34 +278,28 @@ VITE_API_URL=http://localhost:4000/api
 3. Set the build command to `npm run build` and the output directory to `dist`.
 4. Deploy the frontend.
 
-### Automated Deployment (Fly + Vercel)
+### Automated Deployment (Render + Vercel)
 
 The repository now includes GitHub Actions workflows to automate backend and frontend deploy:
 
-- `./.github/workflows/deploy-backend-fly.yml` — deploy backend to Fly
-- `./.github/workflows/deploy-full.yml` — deploy backend to Fly then frontend to Vercel
+- `./.github/workflows/deploy-backend-render.yml` — trigger backend deploy on Render
+- `./.github/workflows/deploy-full.yml` — trigger Render backend deploy then frontend deploy to Vercel
 
 Required GitHub secrets:
 
-- `FLY_API_TOKEN` — create in Fly and store in GitHub Secrets
-- `FLY_APP_NAME` — your Fly app name, e.g. `sahayak-backend`
-- `SUPABASE_DATABASE_URL` — use the full Supabase Postgres connection string
+- `RENDER_API_KEY` — create in Render account settings
+- `RENDER_SERVICE_ID` — the target Render service id for the backend
+- `RENDER_BACKEND_URL` — the public backend URL used by the frontend, e.g. `https://api.saha-yak.in`
 - `VERCEL_TOKEN` — create in Vercel account settings
 - `VERCEL_ORG_ID` — found in Vercel organization settings
 - `VERCEL_PROJECT_ID` — found in Vercel project settings
 - `VERCEL_DOMAIN` — optional, e.g. `saha-yak.in` to register your custom domain with Vercel
 
-Example Supabase URL format:
+Example secrets:
 
-```
-postgres://postgres:<PASSWORD>@<HOST>:5432/<DB_NAME>
-```
-
-Example GitHub secret names:
-
-- `FLY_API_TOKEN`
-- `FLY_APP_NAME`
-- `SUPABASE_DATABASE_URL`
+- `RENDER_API_KEY`
+- `RENDER_SERVICE_ID`
+- `RENDER_BACKEND_URL`
 - `VERCEL_TOKEN`
 - `VERCEL_ORG_ID`
 - `VERCEL_PROJECT_ID`

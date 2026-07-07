@@ -15,29 +15,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Install Fly CLI
-        run: |
-          curl -L https://fly.io/install.sh | sh
-          echo "${HOME}/.fly/bin" >> $GITHUB_PATH
-
-      - name: Deploy backend to Fly
+      - name: Trigger Render backend deploy
         id: deploy-backend
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          FLY_APP_NAME: ${{ secrets.FLY_APP_NAME }}
-          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
         run: |
-          cd Sahayak.Backend
-          sudo chmod +x deploy_fly.sh
-          ./deploy_fly.sh "$FLY_APP_NAME" "$SUPABASE_DATABASE_URL"
+          RESPONSE_FILE=$(mktemp)
+          STATUS_CODE=$(curl -s -o "$RESPONSE_FILE" -w '%{http_code}' \
+            -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache":true}')
+          echo "Render deploy response:"
+          cat "$RESPONSE_FILE"
+          if [ "$STATUS_CODE" != "201" ] && [ "$STATUS_CODE" != "200" ]; then
+            echo "Render deploy request failed with status $STATUS_CODE"
+            exit 1
+          fi
 
       - name: Set API URL output
         id: set-api-url
         run: |
-          echo "api_url=https://$FLY_APP_NAME.fly.dev" >> $GITHUB_OUTPUT
+          echo "api_url=${{ secrets.RENDER_BACKEND_URL }}" >> $GITHUB_OUTPUT
 
   deploy-frontend:
     needs: deploy-backend
@@ -49,7 +49,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install dependencies
         run: npm ci
