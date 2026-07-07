@@ -285,20 +285,11 @@ The repository now includes GitHub Actions workflows to automate backend and fro
 - `./.github/workflows/deploy-backend-render.yml` — trigger backend deploy on Render
 - `./.github/workflows/deploy-full.yml` — trigger Render backend deploy then frontend deploy to Vercel
 
-If you use a custom Render backend domain like `api.saha-yak.in`, add `RENDER_CUSTOM_DOMAIN` as a GitHub secret and the workflows will register/verify the domain automatically.
-
-DNS records for your domains:
-
-- `api.saha-yak.in` → `CNAME` → `sahayak-backend-gfta.onrender.com`
-- `saha-yak.in` → `A` → `76.76.21.21`
-- `www.saha-yak.in` → `CNAME` → `cname.vercel-dns.com`
-
 Required GitHub secrets:
 
 - `RENDER_API_KEY` — create in Render account settings
 - `RENDER_SERVICE_ID` — the target Render service id for the backend
 - `RENDER_BACKEND_URL` — the public backend URL used by the frontend, e.g. `https://api.saha-yak.in`
-- `RENDER_CUSTOM_DOMAIN` — optional, e.g. `api.saha-yak.in` to register and verify the backend domain on Render
 - `VERCEL_TOKEN` — create in Vercel account settings
 - `VERCEL_ORG_ID` — found in Vercel organization settings
 - `VERCEL_PROJECT_ID` — found in Vercel project settings
@@ -309,7 +300,6 @@ Example secrets:
 - `RENDER_API_KEY`
 - `RENDER_SERVICE_ID`
 - `RENDER_BACKEND_URL`
-- `RENDER_CUSTOM_DOMAIN`
 - `VERCEL_TOKEN`
 - `VERCEL_ORG_ID`
 - `VERCEL_PROJECT_ID`
