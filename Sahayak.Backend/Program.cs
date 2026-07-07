@@ -186,6 +186,9 @@ app.UseCors("AllowFrontend");
 app.UseAuthorization();
 app.MapControllers();
 
+app.MapGet("/", () => Results.Ok(new { status = "Sahayak backend is running", api = "/api" }));
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
+
 // Local development uses PORT=4000 by default.
 // In production containers, ASPNETCORE_URLS can override the listening address.
 var urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
