@@ -29,7 +29,7 @@ jobs:
             -d '{"clearCache":true}')
           echo "Render deploy response:"
           cat "$RESPONSE_FILE"
-          if [ "$STATUS_CODE" != "201" ] && [ "$STATUS_CODE" != "200" ]; then
+          if [ "$STATUS_CODE" != "201" ] && [ "$STATUS_CODE" != "200" ] && [ "$STATUS_CODE" != "202" ]; then
             echo "Render deploy request failed with status $STATUS_CODE"
             exit 1
           fi
