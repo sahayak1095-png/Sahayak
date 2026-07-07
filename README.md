@@ -295,6 +295,8 @@ Required GitHub secrets:
 - `VERCEL_PROJECT_ID` — found in Vercel project settings
 - `VERCEL_DOMAIN` — optional, e.g. `saha-yak.in` to register your custom domain with Vercel
 
+When `RENDER_BACKEND_URL` is provided, the deployment workflow will also attempt to register that backend host as a Render custom domain.
+
 Example secrets:
 
 - `RENDER_API_KEY`

@@ -15,6 +15,8 @@ Vercel deployment guide for Sahayak.Frontend
   - `VITE_API_URL` = https://<your-backend-base-url> (e.g. https://api.saha-yak.in)
 - Add any other runtime values the frontend needs.
 
+> If you use the `deploy-full` workflow, set `VERCEL_DOMAIN` to your frontend domain and `RENDER_BACKEND_URL` to your backend domain root.
+
 4) DNS / Custom domain (saha-yak.in)
 - In Vercel: Project → Domains → Add `saha-yak.in` and `www.saha-yak.in`.
 - Vercel will show DNS records to add in GoDaddy. Typical quick values:

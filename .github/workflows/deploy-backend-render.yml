@@ -31,3 +31,42 @@ jobs:
             echo "Render deploy request failed with status $STATUS_CODE"
             exit 1
           fi
+
+      - name: Register backend custom domain on Render
+        if: secrets.RENDER_BACKEND_URL != ''
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
+        run: |
+          DOMAIN=$(python3 - <<'PY'
+import os, urllib.parse, sys
+url = os.getenv('RENDER_BACKEND_URL', '').strip()
+if not url:
+    sys.exit(1)
+if '://' not in url:
+    url = 'https://' + url
+parsed = urllib.parse.urlparse(url)
+if not parsed.hostname:
+    sys.exit(1)
+print(parsed.hostname)
+PY
+)
+          if [ -z "$DOMAIN" ]; then
+            echo "No backend custom domain configured."
+            exit 0
+          fi
+          RESPONSE_FILE=$(mktemp)
+          STATUS_CODE=$(curl -s -o "$RESPONSE_FILE" -w '%{http_code}' \
+            -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/custom-domains" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"${DOMAIN}\"}")
+          echo "Render custom domain response:"
+          cat "$RESPONSE_FILE"
+          if [ "$STATUS_CODE" = "201" ] || [ "$STATUS_CODE" = "409" ]; then
+            echo "Render backend custom domain ${DOMAIN} registered or already exists."
+          else
+            echo "Failed to add Render custom domain (HTTP $STATUS_CODE)"
+            exit 1
+          fi

@@ -50,6 +50,7 @@ Option B — Deploy to Render (simple, managed)
 2) Choose Docker and point Render to your repo (or upload a Dockerfile). Set the build context to `Sahayak.Backend` or provide a Dockerfile at repo root.
 3) Set Environment variables: `ConnectionStrings__DefaultConnection`, `ASPNETCORE_ENVIRONMENT=Production`.
 4) Render will build and deploy the container. Set the service to auto-deploy from your branch or trigger manual deploys.
+5) If you have a custom backend domain, add it in the Render dashboard or provide it via `RENDER_BACKEND_URL` to the `deploy-full` workflow. Then configure your DNS to point `api.saha-yak.in` to Render's provided target.
 
 Option C — DigitalOcean App Platform
 
