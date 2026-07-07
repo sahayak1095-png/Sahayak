@@ -1,0 +1,30 @@
+# Backend
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.docstates
+.dotnet/
+
+# Frontend
+node_modules/
+dist/
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build outputs
+*.zip
+publish/
+
+# Logs
+*.log
+logs/

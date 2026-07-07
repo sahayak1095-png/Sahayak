@@ -1,0 +1,12 @@
+[app]
+  # Change this to your desired Fly app name
+  app = "sahayak-backend"
+
+[build]
+  image = ""
+
+[env]
+  PORT = "8080"
+
+[deploy]
+  release_command = "dotnet ef database update"

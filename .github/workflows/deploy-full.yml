@@ -1,0 +1,101 @@
+name: Full Deployment
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    outputs:
+      api_url: ${{ steps.set-api-url.outputs.api_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install Fly CLI
+        run: |
+          curl -L https://fly.io/install.sh | sh
+          echo "${HOME}/.fly/bin" >> $GITHUB_PATH
+
+      - name: Deploy backend to Fly
+        id: deploy-backend
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_APP_NAME: ${{ secrets.FLY_APP_NAME }}
+          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+        run: |
+          cd Sahayak.Backend
+          sudo chmod +x deploy_fly.sh
+          ./deploy_fly.sh "$FLY_APP_NAME" "$SUPABASE_DATABASE_URL"
+
+      - name: Set API URL output
+        id: set-api-url
+        run: |
+          echo "api_url=https://$FLY_APP_NAME.fly.dev" >> $GITHUB_OUTPUT
+
+  deploy-frontend:
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./Sahayak.Frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./Sahayak.Frontend
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-args: '--prod'
+          working-directory: ./Sahayak.Frontend
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VITE_API_URL: ${{ needs.deploy-backend.outputs.api_url }}
+
+      - name: Register custom domain in Vercel
+        if: secrets.VERCEL_DOMAIN != ''
+        run: |
+          DOMAIN="${{ secrets.VERCEL_DOMAIN }}"
+          PROJECT_ID="${{ secrets.VERCEL_PROJECT_ID }}"
+          TOKEN="${{ secrets.VERCEL_TOKEN }}"
+          echo "Registering domain ${DOMAIN} to Vercel project ${PROJECT_ID}"
+          RESPONSE_FILE=$(mktemp)
+          STATUS_CODE=$(curl -s -o "$RESPONSE_FILE" -w '%{http_code}' -X POST "https://api.vercel.com/v9/projects/${PROJECT_ID}/domains" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"$DOMAIN\"}")
+          if [ "$STATUS_CODE" = "200" ] || [ "$STATUS_CODE" = "201" ] || [ "$STATUS_CODE" = "409" ]; then
+            python3 - <<'PY'
+import json, sys
+resp = json.load(open(sys.argv[1]))
+print('Domain registration response:')
+print('  name:', resp.get('name'))
+if 'dnsRecords' in resp:
+    print('DNS records:')
+    for rec in resp['dnsRecords']:
+        print(f"  {rec.get('type')} {rec.get('name')} {rec.get('value','')}")
+PY
+ "$RESPONSE_FILE"
+          else
+            echo "Failed to add Vercel domain (HTTP $STATUS_CODE)"
+            cat "$RESPONSE_FILE"
+            exit 1
+          fi

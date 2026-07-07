@@ -1,0 +1,16 @@
+{
+  "builds": [
+    {
+      "src": "Sahayak.Backend/Sahayak.Backend.csproj",
+      "use": "docker",
+      "config": {
+        "dockerfilePath": "Sahayak.Backend/Dockerfile"
+      }
+    }
+  ],
+  "plugins": [
+    {
+      "name": "postgresql"
+    }
+  ]
+}
