@@ -34,6 +34,37 @@ jobs:
             exit 1
           fi
 
+      - name: Register Render custom domain
+        if: ${{ env.RENDER_CUSTOM_DOMAIN != '' }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          RENDER_CUSTOM_DOMAIN: ${{ secrets.RENDER_CUSTOM_DOMAIN }}
+        run: |
+          RESPONSE_FILE=$(mktemp)
+          STATUS_CODE=$(curl -s -o "$RESPONSE_FILE" -w '%{http_code}' \
+            -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/custom-domains" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"${RENDER_CUSTOM_DOMAIN}\"}")
+          echo "Render custom domain registration response:"
+          cat "$RESPONSE_FILE"
+          if [ "$STATUS_CODE" != "201" ] && [ "$STATUS_CODE" != "200" ] && [ "$STATUS_CODE" != "409" ]; then
+            echo "Render custom domain registration failed with status $STATUS_CODE"
+            exit 1
+          fi
+          STATUS_CODE=$(curl -s -o "$RESPONSE_FILE" -w '%{http_code}' \
+            -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/custom-domains/${RENDER_CUSTOM_DOMAIN}/verify" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          echo "Render custom domain verification response:"
+          cat "$RESPONSE_FILE"
+          if [ "$STATUS_CODE" != "202" ] && [ "$STATUS_CODE" != "200" ] && [ "$STATUS_CODE" != "201" ]; then
+            echo "Render custom domain verification failed with status $STATUS_CODE"
+            exit 1
+          fi
+
       - name: Set API URL output
         id: set-api-url
         run: |
