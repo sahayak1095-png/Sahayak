@@ -1,4 +1,10 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) || '/api';
+const rawApiBaseUrl = import.meta.env.VITE_API_URL as string | undefined;
+const normalizedApiBaseUrl = rawApiBaseUrl?.replace(/\/+$|\/api\/$/, '') ?? '';
+const API_BASE_URL = normalizedApiBaseUrl
+  ? normalizedApiBaseUrl.endsWith('/api')
+    ? normalizedApiBaseUrl
+    : `${normalizedApiBaseUrl}/api`
+  : '/api';
 
 export interface ServiceCategory {
   id: number;

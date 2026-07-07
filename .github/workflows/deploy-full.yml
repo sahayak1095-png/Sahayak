@@ -37,7 +37,12 @@ jobs:
       - name: Set API URL output
         id: set-api-url
         run: |
-          echo "api_url=${{ secrets.RENDER_BACKEND_URL }}" >> $GITHUB_OUTPUT
+          URL="${{ secrets.RENDER_BACKEND_URL }}"
+          URL="${URL%/}"
+          if [[ "$URL" != */api ]]; then
+            URL="$URL/api"
+          fi
+          echo "api_url=$URL" >> $GITHUB_OUTPUT
 
   deploy-frontend:
     needs: deploy-backend
