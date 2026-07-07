@@ -16,21 +16,7 @@ if (!string.IsNullOrWhiteSpace(databaseUrl))
     if (databaseUrl.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
         databaseUrl.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
     {
-        var uri = new Uri(databaseUrl);
-        var userInfo = uri.UserInfo.Split(':', 2);
-
-        var builderUrl = new NpgsqlConnectionStringBuilder
-        {
-            Host = uri.Host,
-            Port = uri.Port > 0 ? uri.Port : 5432,
-            Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
-            Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
-            Database = uri.AbsolutePath.TrimStart('/'),
-            SslMode = SslMode.Require,
-            TrustServerCertificate = true
-        };
-
-        connectionString = builderUrl.ToString();
+        connectionString = ConvertPostgresUrlToConnectionString(databaseUrl);
     }
     else
     {
@@ -44,6 +30,109 @@ else
 
 builder.Services.AddDbContext<SahayakContext>(options =>
     options.UseNpgsql(connectionString));
+
+static string ConvertPostgresUrlToConnectionString(string databaseUrl)
+{
+    var url = databaseUrl;
+    if (url.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+        url = url["postgres://".Length..];
+    else if (url.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        url = url["postgresql://".Length..];
+
+    var queryIndex = url.IndexOf('?');
+    string query = null;
+    if (queryIndex >= 0)
+    {
+        query = url[(queryIndex + 1)..];
+        url = url[..queryIndex];
+    }
+
+    var atIndex = url.LastIndexOf('@');
+    string userInfo = null;
+    var hostPart = url;
+    if (atIndex >= 0)
+    {
+        userInfo = url[..atIndex];
+        hostPart = url[(atIndex + 1)..];
+    }
+
+    string username = string.Empty;
+    string password = string.Empty;
+    if (!string.IsNullOrEmpty(userInfo))
+    {
+        var colonIndex = userInfo.IndexOf(':');
+        if (colonIndex >= 0)
+        {
+            username = Uri.UnescapeDataString(userInfo[..colonIndex]);
+            password = Uri.UnescapeDataString(userInfo[(colonIndex + 1)..]);
+        }
+        else
+        {
+            username = Uri.UnescapeDataString(userInfo);
+        }
+    }
+
+    var slashIndex = hostPart.IndexOf('/');
+    var hostPort = slashIndex >= 0 ? hostPart[..slashIndex] : hostPart;
+    var database = slashIndex >= 0 ? hostPart[(slashIndex + 1)..] : string.Empty;
+
+    var host = hostPort;
+    var port = 5432;
+
+    if (hostPort.StartsWith("["))
+    {
+        var endBracket = hostPort.IndexOf(']');
+        host = hostPort[..(endBracket + 1)];
+        if (hostPort.Length > endBracket + 1 && hostPort[endBracket + 1] == ':')
+        {
+            var portPart = hostPort[(endBracket + 2)..];
+            if (!int.TryParse(portPart, out port))
+                throw new ArgumentException($"Invalid port in DATABASE_URL: {portPart}");
+        }
+    }
+    else if (hostPort.Contains(':'))
+    {
+        var lastColon = hostPort.LastIndexOf(':');
+        var portPart = hostPort[(lastColon + 1)..];
+        if (!int.TryParse(portPart, out port))
+            throw new ArgumentException($"Invalid port in DATABASE_URL: {portPart}");
+        host = hostPort[..lastColon];
+    }
+
+    var builderUrl = new NpgsqlConnectionStringBuilder
+    {
+        Host = host,
+        Port = port,
+        Username = username,
+        Password = password,
+        Database = Uri.UnescapeDataString(database),
+        SslMode = SslMode.Require,
+        TrustServerCertificate = true
+    };
+
+    if (!string.IsNullOrEmpty(query))
+    {
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length != 2)
+                continue;
+
+            var key = parts[0];
+            var value = Uri.UnescapeDataString(parts[1]);
+            if (key.Equals("sslmode", StringComparison.OrdinalIgnoreCase))
+            {
+                builderUrl.SslMode = Enum.Parse<SslMode>(value, true);
+            }
+            else if (key.Equals("trustservercertificate", StringComparison.OrdinalIgnoreCase))
+            {
+                builderUrl.TrustServerCertificate = bool.Parse(value);
+            }
+        }
+    }
+
+    return builderUrl.ToString();
+}
 
 builder.Services.AddScoped<IServiceRequestService, ServiceRequestService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
