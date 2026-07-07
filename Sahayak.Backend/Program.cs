@@ -6,12 +6,41 @@ using Sahayak.Backend.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
-// When deployed, DATABASE_URL is used by platforms like Railway.
+// When deployed, DATABASE_URL is used by platforms like Render or Railway.
 // When running locally, the application falls back to DefaultConnection from appsettings.json.
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-var connectionString = !string.IsNullOrWhiteSpace(databaseUrl)
-    ? new NpgsqlConnectionStringBuilder(databaseUrl).ToString()
-    : builder.Configuration.GetConnectionString("DefaultConnection");
+string connectionString;
+
+if (!string.IsNullOrWhiteSpace(databaseUrl))
+{
+    if (databaseUrl.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+        databaseUrl.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+    {
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':', 2);
+
+        var builderUrl = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
+            Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
+            Database = uri.AbsolutePath.TrimStart('/'),
+            SslMode = SslMode.Require,
+            TrustServerCertificate = true
+        };
+
+        connectionString = builderUrl.ToString();
+    }
+    else
+    {
+        connectionString = new NpgsqlConnectionStringBuilder(databaseUrl).ToString();
+    }
+}
+else
+{
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+}
 
 builder.Services.AddDbContext<SahayakContext>(options =>
     options.UseNpgsql(connectionString));
