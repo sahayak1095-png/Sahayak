@@ -44,7 +44,7 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod'
-          vercel-version: 47.2.2
+          vercel-version: 41.1.0
           working-directory: ./Sahayak.Frontend
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
