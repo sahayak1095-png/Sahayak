@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'Sahayak.Backend/**'
+      - '.github/workflows/deploy-backend-render.yml'
 
 jobs:
   deploy-backend:
@@ -24,7 +27,7 @@ jobs:
             -H "Authorization: Bearer ${RENDER_API_KEY}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
-            -d '{}')
+            -d '{"clearCache":true}')
           echo "Render deploy response:"
           cat "$RESPONSE_FILE"
           if [ "$STATUS_CODE" != "201" ] && [ "$STATUS_CODE" != "200" ] && [ "$STATUS_CODE" != "202" ]; then
@@ -33,7 +36,7 @@ jobs:
           fi
 
       - name: Register backend custom domain on Render
-        if: secrets.RENDER_BACKEND_URL != ''
+        if: ${{ secrets.RENDER_BACKEND_URL != '' }}
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}

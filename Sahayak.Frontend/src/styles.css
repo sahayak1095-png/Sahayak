@@ -773,9 +773,9 @@ textarea {
   border: 1px solid rgba(242,169,59,0.12);
   padding: 12px 14px;
   border-radius: 12px;
-  color: var(--teal);
+  color: var(--teal-bright);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .fee-note .icon {
@@ -783,7 +783,7 @@ textarea {
   height: 28px;
   display: inline-grid;
   place-items: center;
-  background: rgba(29,114,104,0.12);
+  background: rgba(29,114,104,0.16);
   border-radius: 8px;
   color: var(--marigold);
   font-size: 16px;

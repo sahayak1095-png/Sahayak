@@ -79,6 +79,27 @@ dotnet ef database update
 dotnet run
 ```
 
+## Deployment
+
+### Backend on Render
+
+Required GitHub secrets:
+- `RENDER_API_KEY`
+- `RENDER_SERVICE_ID`
+- `RENDER_BACKEND_URL` (optional, for custom domain registration)
+
+The workflow in [.github/workflows/deploy-backend-render.yml](.github/workflows/deploy-backend-render.yml) triggers a Render deploy on pushes to `main` that touch the backend path.
+
+### Frontend on Vercel
+
+Required GitHub secrets:
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+- `VITE_API_URL`
+
+The workflow in [.github/workflows/deploy-vercel.yml](.github/workflows/deploy-vercel.yml) builds the frontend and deploys it to Vercel on pushes to `main` that touch the frontend path.
+
 ### 5. Run Backend Server
 
 ```bash
