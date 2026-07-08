@@ -43,18 +43,18 @@ jobs:
           RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
         run: |
           DOMAIN=$(python3 - <<'PY'
-import os, urllib.parse, sys
-url = os.getenv('RENDER_BACKEND_URL', '').strip()
-if not url:
-    sys.exit(1)
-if '://' not in url:
-    url = 'https://' + url
-parsed = urllib.parse.urlparse(url)
-if not parsed.hostname:
-    sys.exit(1)
-print(parsed.hostname)
-PY
-)
+          import os, urllib.parse, sys
+          url = os.getenv('RENDER_BACKEND_URL', '').strip()
+          if not url:
+              sys.exit(1)
+          if '://' not in url:
+              url = 'https://' + url
+          parsed = urllib.parse.urlparse(url)
+          if not parsed.hostname:
+              sys.exit(1)
+          print(parsed.hostname)
+          PY
+          )
           if [ -z "$DOMAIN" ]; then
             echo "No backend custom domain configured."
             exit 0
