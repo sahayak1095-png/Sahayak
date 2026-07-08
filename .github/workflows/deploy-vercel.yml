@@ -28,6 +28,9 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
+      - name: Verify Vercel CLI version
+        run: vercel --version
+
       - name: Build frontend
         working-directory: ./Sahayak.Frontend
         env:
@@ -41,6 +44,7 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod'
+          vercel-version: 47.2.2
           working-directory: ./Sahayak.Frontend
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
