@@ -35,25 +35,28 @@ jobs:
           fi
 
       - name: Register backend custom domain on Render
-        if: secrets.RENDER_BACKEND_URL != ''
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
           RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
         run: |
+          if [ -z "$RENDER_BACKEND_URL" ]; then
+            echo "No backend custom domain configured."
+            exit 0
+          fi
           DOMAIN=$(python3 - <<'PY'
-import os, urllib.parse, sys
-url = os.getenv('RENDER_BACKEND_URL', '').strip()
-if not url:
-    sys.exit(1)
-if '://' not in url:
-    url = 'https://' + url
-parsed = urllib.parse.urlparse(url)
-if not parsed.hostname:
-    sys.exit(1)
-print(parsed.hostname)
-PY
-)
+          import os, urllib.parse, sys
+          url = os.getenv('RENDER_BACKEND_URL', '').strip()
+          if not url:
+              sys.exit(1)
+          if '://' not in url:
+              url = 'https://' + url
+          parsed = urllib.parse.urlparse(url)
+          if not parsed.hostname:
+              sys.exit(1)
+          print(parsed.hostname)
+          PY
+          )
           if [ -z "$DOMAIN" ]; then
             echo "No backend custom domain configured."
             exit 0
@@ -104,20 +107,23 @@ PY
         working-directory: ./Sahayak.Frontend
 
       - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v20
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-args: '--prod'
-          working-directory: ./Sahayak.Frontend
+        working-directory: ./Sahayak.Frontend
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VITE_API_URL: ${{ needs.deploy-backend.outputs.api_url }}
+        run: |
+          npm install -g vercel@54.21.1
+          vercel --prod --token "$VERCEL_TOKEN" --yes --cwd . --project "$VERCEL_PROJECT_ID"
 
       - name: Register custom domain in Vercel
-        if: secrets.VERCEL_DOMAIN != ''
         run: |
           DOMAIN="${{ secrets.VERCEL_DOMAIN }}"
+          if [ -z "$DOMAIN" ]; then
+            echo "No Vercel custom domain configured."
+            exit 0
+          fi
           PROJECT_ID="${{ secrets.VERCEL_PROJECT_ID }}"
           TOKEN="${{ secrets.VERCEL_TOKEN }}"
           echo "Registering domain ${DOMAIN} to Vercel project ${PROJECT_ID}"

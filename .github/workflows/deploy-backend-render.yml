@@ -36,12 +36,15 @@ jobs:
           fi
 
       - name: Register backend custom domain on Render
-        if: ${{ secrets.RENDER_BACKEND_URL != '' }}
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
           RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
           RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
         run: |
+          if [ -z "$RENDER_BACKEND_URL" ]; then
+            echo "No backend custom domain configured."
+            exit 0
+          fi
           DOMAIN=$(python3 - <<'PY'
           import os, urllib.parse, sys
           url = os.getenv('RENDER_BACKEND_URL', '').strip()
