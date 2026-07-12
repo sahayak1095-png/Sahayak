@@ -48,6 +48,10 @@ jobs:
             echo "No backend custom domain configured."
             exit 0
           fi
+          if [[ "$DOMAIN" == *.onrender.com ]] || [[ "$DOMAIN" == *.render.com ]]; then
+            echo "Skipping Render custom domain registration for default Render host: $DOMAIN"
+            exit 0
+          fi
           RESPONSE_FILE=$(mktemp)
           STATUS_CODE=$(curl -s -o "$RESPONSE_FILE" -w '%{http_code}' \
             -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/custom-domains" \

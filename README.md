@@ -88,6 +88,8 @@ Required GitHub secrets:
 - `RENDER_SERVICE_ID`
 - `RENDER_BACKEND_URL` (optional, for custom domain registration)
 
+If you want the backend to use your GoDaddy domain, set `RENDER_BACKEND_URL` to `https://api.saha-yak.in`.
+
 The workflow in [.github/workflows/deploy-backend-render.yml](.github/workflows/deploy-backend-render.yml) triggers a Render deploy on pushes to `main` that touch the backend path.
 
 ### Frontend on Vercel
@@ -97,6 +99,9 @@ Required GitHub secrets:
 - `VERCEL_ORG_ID`
 - `VERCEL_PROJECT_ID`
 - `VITE_API_URL`
+- `VERCEL_DOMAIN` (optional, for frontend custom domain registration)
+
+If you want the frontend to use your GoDaddy domain, set `VERCEL_DOMAIN` to `saha-yak.in` and `VITE_API_URL` to `https://api.saha-yak.in`.
 
 The workflow in [.github/workflows/deploy-vercel.yml](.github/workflows/deploy-vercel.yml) builds the frontend and deploys it to Vercel on pushes to `main` that touch the frontend path.
 

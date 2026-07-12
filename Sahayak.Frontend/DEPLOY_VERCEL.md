@@ -12,10 +12,10 @@ Vercel deployment guide for Sahayak.Frontend
 
 3) Environment variables
 - In Vercel dashboard → Settings → Environment Variables, set:
-  - `VITE_API_URL` = https://<your-backend-base-url> (e.g. https://api.saha-yak.in)
+  - `VITE_API_URL` = https://api.saha-yak.in
 - Add any other runtime values the frontend needs.
 
-> If you use the `deploy-full` workflow, set `VERCEL_DOMAIN` to your frontend domain and `RENDER_BACKEND_URL` to your backend domain root.
+> If you use the `deploy-full` workflow, set `VERCEL_DOMAIN` to `saha-yak.in` and `RENDER_BACKEND_URL` to `https://api.saha-yak.in`.
 
 4) DNS / Custom domain (saha-yak.in)
 - In Vercel: Project → Domains → Add `saha-yak.in` and `www.saha-yak.in`.
