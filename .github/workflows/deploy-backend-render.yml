@@ -17,23 +17,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Trigger Render backend deploy
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
         run: |
-          RESPONSE_FILE=$(mktemp)
-          STATUS_CODE=$(curl -sS -o "$RESPONSE_FILE" -w '%{http_code}' \
-            -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
-            -H "Authorization: Bearer ${RENDER_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json" \
-            -d '{}')
-          echo "Render deploy response:"
-          cat "$RESPONSE_FILE"
-          if [ "$STATUS_CODE" != "201" ] && [ "$STATUS_CODE" != "200" ] && [ "$STATUS_CODE" != "202" ]; then
-            echo "Render deploy request failed with status $STATUS_CODE"
-            exit 1
-          fi
+          echo "Render deploy is handled by the Render service auto-deploy setting."
+          echo "If you want to trigger a deployment manually, use the Render dashboard or enable auto-deploy for this service."
 
       - name: Register backend custom domain on Render
         env:
