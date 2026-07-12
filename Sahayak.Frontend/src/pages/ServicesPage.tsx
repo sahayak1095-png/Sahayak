@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, KeyboardEvent } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { categoriesAPI, serviceItemsAPI, ServiceCategory } from '../services/api'
 
 interface ServicesPageProps {
-  onNavigate: (page: string) => void
+  onNavigate: (page: string, payload?: { service?: string; category?: string }) => void
 }
 
 const ICONS: Record<string, string> = {
@@ -27,129 +27,66 @@ const ICONS: Record<string, string> = {
   briefcase: '💼'
 }
 
-const POPULAR_QUERIES = [
-  'medicine pickup',
-  'home cleaning',
-  'pet care',
-  'document help',
-  'move-in support'
-]
-
 export default function ServicesPage({ onNavigate }: ServicesPageProps) {
   const [categories, setCategories] = useState<ServiceCategory[]>([])
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null)
   const [selectedCategoryItems, setSelectedCategoryItems] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [activeSuggestion, setActiveSuggestion] = useState<string | null>(null)
-  const [highlightedService, setHighlightedService] = useState<string | null>(null)
+  const [categoryFilterId, setCategoryFilterId] = useState<number | null>(null)
+  const [selectedService, setSelectedService] = useState<string | null>(null)
   const selectedCategoryRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     categoriesAPI.getAll()
-      .then(cats => {
-        setCategories(cats)
-      })
+      .then(setCategories)
       .catch(err => {
         console.error('Failed to load categories:', err)
       })
   }, [])
 
-  const findMatchingCategory = (query: string) => {
-    const lowerQuery = query.toLowerCase()
-    return categories.find(cat => {
+  const filterCategories = () => {
+    const lowerQuery = searchQuery.trim().toLowerCase()
+    return categories.filter(cat => {
+      if (categoryFilterId && cat.id !== categoryFilterId) {
+        return false
+      }
+      if (!lowerQuery) {
+        return true
+      }
       if (cat.name.toLowerCase().includes(lowerQuery)) {
         return true
       }
-      if (Array.isArray(cat.items)) {
-        return cat.items.some(item => typeof item === 'string' && item.toLowerCase().includes(lowerQuery))
-      }
-      return false
-    }) || null
-  }
-
-  const buildSuggestions = (query: string) => {
-    const lowerQuery = query.toLowerCase()
-    const results = new Set<string>()
-
-    categories.forEach(cat => {
-      if (cat.name.toLowerCase().includes(lowerQuery)) {
-        results.add(cat.name)
-      }
-      cat.items?.forEach(item => {
-        if (typeof item === 'string' && item.toLowerCase().includes(lowerQuery)) {
-          results.add(item)
-        }
-      })
+      return cat.items?.some(item => item.toLowerCase().includes(lowerQuery))
     })
-
-    return Array.from(results).slice(0, 8)
   }
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
-    setHighlightedService(null)
-
-    if (!query.trim()) {
-      setSelectedCategory(null)
-      setSuggestions([])
-      setActiveSuggestion(null)
-      return
-    }
-
-    const nextSuggestions = buildSuggestions(query)
-    setSuggestions(nextSuggestions)
-    setActiveSuggestion(nextSuggestions.length > 0 ? nextSuggestions[0] : null)
-    setSelectedCategory(findMatchingCategory(query))
-  }
-
-  const handlePopularQueryClick = (query: string) => {
-    setSearchQuery(query)
-    setHighlightedService(null)
-    const nextSuggestions = buildSuggestions(query)
-    setSuggestions(nextSuggestions)
-    setActiveSuggestion(nextSuggestions.length > 0 ? nextSuggestions[0] : null)
-    setSelectedCategory(findMatchingCategory(query))
-  }
-
-  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (!suggestions.length) return
-
-    const currentIndex = suggestions.findIndex(item => item === activeSuggestion)
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      const nextIndex = currentIndex < suggestions.length - 1 ? currentIndex + 1 : 0
-      setActiveSuggestion(suggestions[nextIndex])
-      return
-    }
-
-    if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      const prevIndex = currentIndex > 0 ? currentIndex - 1 : suggestions.length - 1
-      setActiveSuggestion(suggestions[prevIndex])
-      return
-    }
-
-    if (event.key === 'Enter' && activeSuggestion) {
-      event.preventDefault()
-      handleSuggestionSelect(activeSuggestion)
-    }
-  }
-
-  const handleSuggestionSelect = (suggestion: string) => {
-    setSearchQuery(suggestion)
-    setSuggestions([])
-    setActiveSuggestion(suggestion)
-    setHighlightedService(suggestion)
-
-    const matchedCategory = categories.find(cat =>
-      cat.name === suggestion ||
-      cat.items?.some(item => item === suggestion)
-    )
-
-    setSelectedCategory(matchedCategory || null)
+    setSelectedCategory(null)
     setSelectedCategoryItems([])
   }
+
+  const handleCategoryFilterChange = (value: string) => {
+    const nextCategoryId = value ? parseInt(value, 10) : null
+    setCategoryFilterId(nextCategoryId)
+    setSearchQuery('')
+
+    if (nextCategoryId != null) {
+      const category = categories.find(c => c.id === nextCategoryId) || null
+      setSelectedCategory(category)
+      setSelectedCategoryItems([])
+      if (category) {
+        serviceItemsAPI.getByCategoryId(category.id)
+          .then(items => setSelectedCategoryItems(items.map(item => item.name)))
+          .catch(err => console.error('Failed to load category items:', err))
+      }
+      return
+    }
+
+    setSelectedCategory(null)
+    setSelectedCategoryItems([])
+  }
+
 
   useEffect(() => {
     if (selectedCategoryRef.current) {
@@ -159,140 +96,171 @@ export default function ServicesPage({ onNavigate }: ServicesPageProps) {
 
   const handleCategoryClick = (cat: ServiceCategory) => {
     setSelectedCategory(cat)
-    setSelectedCategoryItems([])
+    setCategoryFilterId(cat.id)
     setSearchQuery('')
-    setSuggestions([])
-    setActiveSuggestion(null)
-    setHighlightedService(null)
+    setSelectedCategoryItems([])
+    setSelectedService(null)
 
     serviceItemsAPI.getByCategoryId(cat.id)
-      .then(items => {
-        setSelectedCategoryItems(items.map(item => item.name))
-      })
-      .catch(err => {
-        console.error('Failed to load category items:', err)
-      })
+      .then(items => setSelectedCategoryItems(items.map(item => item.name)))
+      .catch(err => console.error('Failed to load category items:', err))
   }
 
-  const handleServiceClick = (_service: string) => {
-    // Navigate to registration page with service pre-selected
-    onNavigate('register')
+  const handleServiceClick = (service: string, categoryName?: string) => {
+    setSelectedService(service)
+    if (categoryName) {
+      const matched = categories.find(cat => cat.name === categoryName)
+      if (matched) {
+        setSelectedCategory(matched)
+        setCategoryFilterId(matched.id)
+      }
+    }
   }
+
+  const visibleCategories = filterCategories()
+  const displayedSelectedItems = selectedCategory ?
+    (selectedCategoryItems.length > 0 ? selectedCategoryItems : selectedCategory.items)
+      .filter(item => !searchQuery.trim() || item.toLowerCase().includes(searchQuery.toLowerCase()))
+    : []
+
+  const totalServices = categories.reduce((sum, category) => sum + (category.items?.length ?? 0), 0)
+  const totalCategories = categories.length
 
   return (
     <section className="page active">
       <div className="section">
         <div className="wrap">
-          <div className="section-head">
-            <div className="eyebrow">
-              <span className="dot"></span>
-              Choose a category
+          <div className="hero hero-services hero-service-page">
+            <div className="hero-copy">
+              <div className="eyebrow">
+                <span className="dot"></span>
+                Browse Services
+              </div>
+              <h1>Find trusted and verified helpers for every task you need.</h1>
+              <p className="lede">Search for a service, choose a category, and book trusted help in Bengaluru.</p>
+              <div className="stats-row stats-services">
+                <div className="stat">
+                  <b>{totalServices}</b>
+                  <span>Services</span>
+                </div>
+                <div className="stat">
+                  <b>{totalCategories}</b>
+                  <span>Categories</span>
+                </div>
+              </div>
             </div>
-            <h2>What can Sahayak take off your plate?</h2>
-            <p>Search a task or hover a category to preview what's covered — register once you know what you need.</p>
           </div>
-          
-          <div className="search-row">
-            <div className="search-bar">
+
+          <div className="service-topbar">
+            <div className="search-bar search-bar-service">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="7"/>
-                <path d="M21 21l-4.3-4.3"/>
+                <circle cx="11" cy="11" r="7" />
+                <path d="M21 21l-4.3-4.3" />
               </svg>
               <input
-                placeholder="Try 'medicine pickup', 'house help', or 'pet care'…"
+                placeholder="Search for services (e.g. Plumbing, AC repair...)"
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
               />
             </div>
-            <div className="search-context">
-              {searchQuery ? (
-                <p>Searching for <strong>{searchQuery}</strong>. Tap a suggestion or category to narrow results.</p>
-              ) : (
-                <p>Type a service name to get quick suggestions and preview matching categories.</p>
-              )}
-            </div>
           </div>
 
-          <div className="quick-queries">
-            {POPULAR_QUERIES.map(query => (
-              <button
-                key={query}
-                type="button"
-                className="query-chip"
-                onClick={() => handlePopularQueryClick(query)}
-              >
-                {query}
-              </button>
-            ))}
-          </div>
-
-          {suggestions.length > 0 && (
-            <div className="suggestions-list">
-              {suggestions.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  className={`suggestion-item ${activeSuggestion === suggestion ? 'active' : ''}`}
-                  onClick={() => handleSuggestionSelect(suggestion)}
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="bento">
-            {categories.map((cat, idx) => (
-              <button
-                key={cat.id}
-                className={`cat-card ${idx === 0 ? 'big' : ''} ${selectedCategory?.id === cat.id ? 'active' : ''}`}
-                type="button"
-                onClick={() => handleCategoryClick(cat)}
-              >
-                <div className="cat-icon">{ICONS[cat.icon] || '•'}</div>
-                <div className="cat-preview">
-                  {cat.items.slice(0, 4).map((item, i) => (
-                    <div key={i}>· {item}</div>
-                  ))}
-                  {cat.items.length > 4 && (
-                    <div className="more">+{cat.items.length - 4} more →</div>
-                  )}
-                </div>
-                <h3>{cat.name}</h3>
-                <div className="count">{cat.items.length} ways to help</div>
-              </button>
-            ))}
-          </div>
-
-          {selectedCategory && (
-            <div className="items-panel open" ref={selectedCategoryRef}>
-              <div className="items-panel-head">
-                <div>
-                  <h4>{selectedCategory.name}</h4>
-                  <p>Tap a service to move directly to registration.</p>
-                </div>
-                <span className="item-count">{selectedCategory.items.length} services</span>
-              </div>
-              <div className="chip-row">
-                {(selectedCategoryItems.length > 0 ? selectedCategoryItems : selectedCategory.items).map((item, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={`chip ${searchQuery && item.toLowerCase().includes(searchQuery.toLowerCase()) ? 'hit' : ''} ${highlightedService === item ? 'hit' : ''}`}
-                    onClick={() => handleServiceClick(item)}
+          <div className="services-grid" id="services-categories">
+            <aside className="service-sidebar">
+              <div className="sidebar-panel">
+                <div className="sidebar-title">Categories</div>
+                <ul className="category-menu">
+                  <li
+                    className={`category-menu-item ${categoryFilterId == null ? 'active' : ''}`}
+                    onClick={() => handleCategoryFilterChange('')}
                   >
-                    {item}
+                    <span>All Services</span>
+                    <strong>{totalServices}</strong>
+                  </li>
+                  {categories.map(cat => (
+                    <li
+                      key={cat.id}
+                      className={`category-menu-item ${categoryFilterId === cat.id ? 'active' : ''}`}
+                      onClick={() => handleCategoryFilterChange(cat.id.toString())}
+                    >
+                      <span>{cat.name}</span>
+                      <strong>{cat.items.length}</strong>
+                    </li>
+                  ))}
+                </ul>
+                <div className="sidebar-help">
+                  <strong>Can’t find what you need?</strong>
+                  <p>Send a custom request and we’ll match a helper for you.</p>
+                </div>
+              </div>
+            </aside>
+
+            <main className="service-content">
+              <div className="service-header-row">
+                <div>
+                  <div className="eyebrow">
+                    <span className="dot"></span>
+                    Popular Services
+                  </div>
+                  <h2>Top categories picked by customers</h2>
+                </div>
+              </div>
+
+              <div className="service-card-grid">
+                {visibleCategories.slice(0, 12).map(cat => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    className={`service-card ${selectedCategory?.id === cat.id ? 'active' : ''}`}
+                    onClick={() => handleCategoryClick(cat)}
+                  >
+                    <div className="service-card-top">
+                      <span className="service-card-icon">{ICONS[cat.icon] || '•'}</span>
+                      <span className="service-card-name">{cat.name}</span>
+                    </div>
+                    <p className="service-card-copy">{cat.items[0] ?? 'Trusted helper at your doorstep'}</p>
+                    <div className="service-card-footer">
+                      <span>{cat.items.length} services</span>
+                    </div>
                   </button>
                 ))}
               </div>
-            </div>
-          )}
 
-          <div style={{ textAlign: 'center', marginTop: '36px' }}>
-            <button className="btn-primary" onClick={() => onNavigate('register')}>
-              Register a request
-            </button>
+              {selectedCategory && (
+                <div className="selected-category-panel" ref={selectedCategoryRef}>
+                  <div className="panel-title">{selectedCategory.name} services</div>
+                  <div className="chip-grid">
+                    {displayedSelectedItems.map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className={`chip ${selectedService === item ? 'picked' : ''}`}
+                        onClick={() => handleServiceClick(item, selectedCategory.name)}
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedService && (
+                <div className="selected-service-banner">
+                  <p>
+                    Selected service: <strong>{selectedService}</strong>. Click register to continue with this task.
+                  </p>
+                </div>
+              )}
+
+              <div className="register-action-row">
+                <button
+                  className="btn-primary"
+                  onClick={() => onNavigate('register', { service: selectedService ?? undefined, category: selectedCategory?.name ?? undefined })}
+                >
+                  Register a request
+                </button>
+              </div>
+            </main>
           </div>
         </div>
       </div>

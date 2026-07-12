@@ -1,9 +1,18 @@
+import { useState } from 'react'
+
 interface NavigationProps {
   currentPage: string
   onPageChange: (page: string) => void
 }
 
+const LANGUAGE_OPTIONS = [
+  { value: 'en', label: 'English' },
+  { value: 'kn', label: 'Kannada' }
+]
+
 export default function Navigation({ currentPage, onPageChange }: NavigationProps) {
+  const [language, setLanguage] = useState('en')
+
   return (
     <div className="nav">
       <button className="brand" onClick={() => onPageChange('home')}>
@@ -38,6 +47,15 @@ export default function Navigation({ currentPage, onPageChange }: NavigationProp
         >
           Admin
         </button>
+      </div>
+      <div className="language-picker">
+        <select value={language} onChange={(e) => setLanguage(e.target.value)} aria-label="Select language">
+          {LANGUAGE_OPTIONS.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
       <button className="nav-cta" onClick={() => onPageChange('about')}>
         About Us

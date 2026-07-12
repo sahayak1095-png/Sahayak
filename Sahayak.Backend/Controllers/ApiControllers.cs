@@ -151,9 +151,9 @@ public class ServiceItemsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<ServiceItemDto>>> GetAllItems()
+    public async Task<ActionResult<List<ServiceItemDto>>> GetAllItems([FromQuery] string? search = null, [FromQuery] int? categoryId = null)
     {
-        var items = await _serviceItemService.GetAllItemsAsync();
+        var items = await _serviceItemService.GetAllItemsAsync(search, categoryId);
         return Ok(items);
     }
 

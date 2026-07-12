@@ -221,7 +221,7 @@ public class CategoryService : ICategoryService
 
 public interface IServiceItemService
 {
-    Task<List<ServiceItemDto>> GetAllItemsAsync();
+    Task<List<ServiceItemDto>> GetAllItemsAsync(string? search = null, int? categoryId = null);
     Task<List<ServiceItemDto>> GetItemsByCategoryIdAsync(int categoryId);
 }
 
@@ -234,10 +234,25 @@ public class ServiceItemService : IServiceItemService
         _context = context;
     }
 
-    public async Task<List<ServiceItemDto>> GetAllItemsAsync()
+    public async Task<List<ServiceItemDto>> GetAllItemsAsync(string? search = null, int? categoryId = null)
     {
-        var items = await _context.ServiceItems
+        var query = _context.ServiceItems
             .Include(i => i.Category)
+            .AsQueryable();
+
+        if (categoryId.HasValue)
+        {
+            query = query.Where(i => i.CategoryId == categoryId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var lowerSearch = search.Trim().ToLower();
+            query = query.Where(i => i.Name.ToLower().Contains(lowerSearch)
+                                     || i.Category.Name.ToLower().Contains(lowerSearch));
+        }
+
+        var items = await query
             .OrderBy(i => i.Name)
             .ToListAsync();
 
@@ -252,18 +267,7 @@ public class ServiceItemService : IServiceItemService
 
     public async Task<List<ServiceItemDto>> GetItemsByCategoryIdAsync(int categoryId)
     {
-        var items = await _context.ServiceItems
-            .Where(i => i.CategoryId == categoryId)
-            .OrderBy(i => i.Name)
-            .ToListAsync();
-
-        return items.Select(i => new ServiceItemDto
-        {
-            Id = i.Id,
-            Name = i.Name,
-            CategoryId = i.CategoryId,
-            CategoryName = i.Category?.Name ?? string.Empty
-        }).ToList();
+        return await GetAllItemsAsync(categoryId: categoryId);
     }
 }
 

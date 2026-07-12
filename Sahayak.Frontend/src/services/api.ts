@@ -102,8 +102,13 @@ export const categoriesAPI = {
 };
 
 export const serviceItemsAPI = {
-  getAll: async (): Promise<ServiceItem[]> => {
-    const response = await fetch(`${API_BASE_URL}/serviceitems`);
+  getAll: async (search?: string, categoryId?: number): Promise<ServiceItem[]> => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (categoryId) params.append('categoryId', categoryId.toString());
+
+    const url = `${API_BASE_URL}/serviceitems${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch service items');
     return response.json();
   },

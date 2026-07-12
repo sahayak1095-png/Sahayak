@@ -4,6 +4,8 @@ import { categoriesAPI, areasAPI, requestsAPI, CreateServiceRequestDTO, ServiceC
 interface RegisterPageProps {
   onNavigate: (page: string) => void
   onConfirm: (data: any) => void
+  initialService?: string | null
+  initialCategory?: string | null
 }
 
 declare global {
@@ -14,7 +16,7 @@ declare global {
   }
 }
 
-export default function RegisterPage({ onNavigate, onConfirm }: RegisterPageProps) {
+export default function RegisterPage({ onNavigate, onConfirm, initialService, initialCategory }: RegisterPageProps) {
   const [step, setStep] = useState(1)
   const [categories, setCategories] = useState<ServiceCategory[]>([])
   const [areas, setAreas] = useState<AreaCoordinate[]>([])
@@ -58,11 +60,22 @@ export default function RegisterPage({ onNavigate, onConfirm }: RegisterPageProp
       } else {
         setAreaLoadError('')
       }
+
+      if (initialCategory) {
+        const matchedIndex = cats.findIndex(cat => cat.name === initialCategory)
+        if (matchedIndex >= 0) {
+          setFormData(prev => ({ ...prev, category: matchedIndex.toString() }))
+        }
+      }
+
+      if (initialService) {
+        setPickedServices([initialService])
+      }
     }).catch(err => {
       console.error('Failed to load data:', err)
       setAreaLoadError('Failed to load areas. Check backend connectivity and API response. See console for details.')
     })
-  }, [])
+  }, [initialCategory, initialService])
 
   useEffect(() => {
     if (step === 3) {
