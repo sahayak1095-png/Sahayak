@@ -103,6 +103,8 @@ Required GitHub secrets:
 
 If you want the frontend to use your GoDaddy domain, set `VERCEL_DOMAIN` to `saha-yak.in` and `VITE_API_URL` to `https://api.saha-yak.in`.
 
+If `VITE_API_URL` is not set during build, the frontend will still default to `https://api.saha-yak.in/api`.
+
 The workflow in [.github/workflows/deploy-vercel.yml](.github/workflows/deploy-vercel.yml) builds the frontend and deploys it to Vercel on pushes to `main` that touch the frontend path.
 
 ### 5. Run Backend Server

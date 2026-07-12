@@ -1,10 +1,8 @@
-const rawApiBaseUrl = import.meta.env.VITE_API_URL as string | undefined;
-const normalizedApiBaseUrl = rawApiBaseUrl?.replace(/\/+$|\/api\/$/, '') ?? '';
-const API_BASE_URL = normalizedApiBaseUrl
-  ? normalizedApiBaseUrl.endsWith('/api')
-    ? normalizedApiBaseUrl
-    : `${normalizedApiBaseUrl}/api`
-  : '/api';
+const rawApiBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? '';
+const normalizedApiBaseUrl = rawApiBaseUrl
+  ? rawApiBaseUrl.replace(/\/+$/, '').replace(/\/api$/, '')
+  : 'https://api.saha-yak.in';
+const API_BASE_URL = `${normalizedApiBaseUrl}/api`;
 
 export interface ServiceCategory {
   id: number;
