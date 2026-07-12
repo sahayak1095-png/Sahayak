@@ -130,16 +130,16 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"name\":\"$DOMAIN\"}")
           if [ "$STATUS_CODE" = "200" ] || [ "$STATUS_CODE" = "201" ] || [ "$STATUS_CODE" = "409" ]; then
-            python3 - "$RESPONSE_FILE" <<'PY'
-            import json, sys
-            resp = json.load(open(sys.argv[1]))
-            print('Domain registration response:')
-            print('  name:', resp.get('name'))
-            if 'dnsRecords' in resp:
-                print('DNS records:')
-                for rec in resp['dnsRecords']:
-                    print(f"  {rec.get('type')} {rec.get('name')} {rec.get('value','')}")
-            PY
+            python3 - <<'PY'
+import json, sys
+resp = json.load(open("$RESPONSE_FILE"))
+print('Domain registration response:')
+print('  name:', resp.get('name'))
+if 'dnsRecords' in resp:
+    print('DNS records:')
+    for rec in resp['dnsRecords']:
+        print(f"  {rec.get('type')} {rec.get('name')} {rec.get('value','')}")
+PY
           else
             echo "Failed to add Vercel domain (HTTP $STATUS_CODE)"
             cat "$RESPONSE_FILE"
