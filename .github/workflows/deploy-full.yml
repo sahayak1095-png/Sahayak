@@ -106,8 +106,12 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VITE_API_URL: ${{ needs.deploy-backend.outputs.api_url }}
+          VERCEL_GIT_NAME: ${{ secrets.VERCEL_GIT_NAME }}
+          VERCEL_GIT_EMAIL: ${{ secrets.VERCEL_GIT_EMAIL }}
         run: |
           npm install -g vercel@54.21.1
+          if [ -n "$VERCEL_GIT_NAME" ]; then git config user.name "$VERCEL_GIT_NAME"; fi
+          if [ -n "$VERCEL_GIT_EMAIL" ]; then git config user.email "$VERCEL_GIT_EMAIL"; fi
           vercel --prod --token "$VERCEL_TOKEN" --yes --cwd . --scope "$VERCEL_ORG_ID" --project "$VERCEL_PROJECT_ID"
 
       - name: Register custom domain in Vercel
