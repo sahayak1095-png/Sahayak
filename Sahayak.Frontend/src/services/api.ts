@@ -1,7 +1,8 @@
 const rawApiBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? '';
+const defaultApiBaseUrl = import.meta.env.DEV ? 'http://localhost:4000' : 'https://api.saha-yak.in';
 const normalizedApiBaseUrl = rawApiBaseUrl
-  ? rawApiBaseUrl.replace(/\/+$/, '').replace(/\/api$/, '')
-  : 'https://api.saha-yak.in';
+  ? rawApiBaseUrl.replace(/\/+$|\/api$/, '')
+  : defaultApiBaseUrl;
 const API_BASE_URL = `${normalizedApiBaseUrl}/api`;
 
 export interface ServiceCategory {
@@ -179,6 +180,17 @@ export const requestsAPI = {
     });
     if (!response.ok) throw new Error('Failed to update status');
     return response.json();
+  },
+
+  deleteRequest: async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/requests/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete request');
+  },
+
+  delete: async (id: number): Promise<void> => {
+    return requestsAPI.deleteRequest(id);
   },
 
   getStats: async (): Promise<AdminStats> => {

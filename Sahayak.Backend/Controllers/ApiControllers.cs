@@ -56,6 +56,15 @@ public class RequestsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteRequest(int id)
+    {
+        var success = await _requestService.DeleteRequestAsync(id);
+        if (!success)
+            return NotFound();
+        return NoContent();
+    }
+
     [HttpGet("stats")]
     public async Task<ActionResult<AdminStatsDto>> GetStats()
     {

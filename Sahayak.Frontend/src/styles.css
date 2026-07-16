@@ -477,58 +477,6 @@ h3,
   box-shadow: 0 10px 28px rgba(242, 169, 59, 0.3);
 }
 
-.hero-summary-card {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 18px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(15, 61, 57, 0.08);
-  border-radius: 26px;
-  padding: 20px;
-  box-shadow: 0 20px 40px rgba(15, 61, 57, 0.08);
-}
-
-.summary-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 14px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 22px;
-}
-
-.summary-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(242, 169, 59, 0.12);
-  font-size: 18px;
-}
-
-.summary-item strong {
-  display: block;
-  font-size: 22px;
-  color: var(--teal);
-}
-
-.summary-item span {
-  color: var(--ink-soft);
-  font-size: 13px;
-}
-
-.hero-panel {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.hero-panel {
-  position: relative;
-  overflow: visible;
-}
 
 .hero-art {
   position: absolute;
@@ -701,7 +649,7 @@ img, svg, iframe, .panel, .hero-art { max-width: 100%; }
   .hero h1, .large-heading { font-size: clamp(28px, 8vw, 42px); }
   .hero-inner { display: block; gap: 18px; }
   .hero-art { display: none; }
-  .hero-stats-card { max-width: 100%; }
+  .hero-summary-card { max-width: 100%; }
 
   .services-grid { display: block; }
   .service-sidebar { width: 100%; order: 2; margin-top: 18px; }

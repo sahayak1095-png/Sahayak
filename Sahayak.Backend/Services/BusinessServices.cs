@@ -11,6 +11,7 @@ public interface IServiceRequestService
     Task<ServiceRequestDto?> GetRequestByReferenceAsync(string referenceId);
     Task<List<ServiceRequestDto>> GetAllRequestsAsync(string? statusFilter = null, string? searchQuery = null);
     Task<ServiceRequestDto?> UpdateStatusAsync(int id, string status);
+    Task<bool> DeleteRequestAsync(int id);
     Task<AdminStatsDto> GetStatsAsync();
 }
 
@@ -113,6 +114,17 @@ public class ServiceRequestService : IServiceRequestService
         await _context.SaveChangesAsync();
 
         return MapToDto(request);
+    }
+
+    public async Task<bool> DeleteRequestAsync(int id)
+    {
+        var request = await _context.ServiceRequests.FindAsync(id);
+        if (request == null)
+            return false;
+
+        _context.ServiceRequests.Remove(request);
+        await _context.SaveChangesAsync();
+        return true;
     }
 
     public async Task<AdminStatsDto> GetStatsAsync()

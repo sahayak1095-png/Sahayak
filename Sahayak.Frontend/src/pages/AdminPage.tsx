@@ -111,6 +111,22 @@ export default function AdminPage({ onNavigate: _onNavigate }: AdminPageProps) {
     }
   }
 
+  const handleDeleteRequest = async (requestId: number) => {
+    const confirmed = window.confirm('Delete this service request? This cannot be undone.')
+    if (!confirmed) return
+
+    try {
+      await requestsAPI.deleteRequest(requestId)
+      const remaining = requests.filter(r => r.id !== requestId)
+      setRequests(remaining)
+      applyFiltersAndSearch(remaining, currentFilter, searchQuery)
+      const newStats = await adminAPI.getStats()
+      setStats(newStats)
+    } catch (err) {
+      console.error('Failed to delete request:', err)
+    }
+  }
+
   if (!isAuthenticated) {
     return (
       <section className="page active">
@@ -299,23 +315,40 @@ export default function AdminPage({ onNavigate: _onNavigate }: AdminPageProps) {
                         <div style={{ fontSize: '12px', color: 'var(--ink-faint)', marginBottom: '4px' }}>Phone</div>
                         <div style={{ fontSize: '14px', fontWeight: '500' }}>{req.phone || '—'}</div>
                       </div>
-                      <select
-                        value={req.status}
-                        onChange={(e) => handleStatusChange(req.id, e.target.value)}
-                        style={{
-                          padding: '8px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--line)',
-                          background: req.status === 'New' ? 'rgba(242, 169, 59, 0.1)' : req.status === 'Contacted' ? 'rgba(100, 150, 200, 0.1)' : 'rgba(100, 200, 100, 0.1)',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <option value="New">🟠 New</option>
-                        <option value="Contacted">🔵 Contacted</option>
-                        <option value="Completed">✅ Completed</option>
-                      </select>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                        <select
+                          value={req.status}
+                          onChange={(e) => handleStatusChange(req.id, e.target.value)}
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--line)',
+                            background: req.status === 'New' ? 'rgba(242, 169, 59, 0.1)' : req.status === 'Contacted' ? 'rgba(100, 150, 200, 0.1)' : 'rgba(100, 200, 100, 0.1)',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="New">🟠 New</option>
+                          <option value="Contacted">🔵 Contacted</option>
+                          <option value="Completed">✅ Completed</option>
+                        </select>
+                        <button
+                          onClick={() => handleDeleteRequest(req.id)}
+                          style={{
+                            padding: '10px 14px',
+                            background: 'rgba(255, 88, 88, 0.12)',
+                            border: '1px solid rgba(255, 88, 88, 0.25)',
+                            borderRadius: '10px',
+                            color: 'var(--coral)',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
                     </div>
 
                     <div style={{

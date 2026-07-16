@@ -31,7 +31,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
     building: '',
     street: '',
     area: '',
-    city: 'Bengaluru',
+    city: '',
     pinCode: '',
     landmark: '',
     latitude: BLR_CENTER[0],
@@ -40,7 +40,8 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
     selectedServices: [] as string[],
     preferredDate: '',
     preferredTime: '',
-    notes: ''
+    notes: '',
+    capturedAddress: ''
   })
 
   const [locationError, setLocationError] = useState('')
@@ -145,7 +146,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
       const building = address.building || address.housename || address.house || address.apartment || address.office || address.shop || address.amenity || ''
       const areaName = address.suburb || address.neighbourhood || address.village || address.town || address.hamlet || address.city_district || address.district || address.county || address.state_district || address.state || ''
       const pin = address.postcode ?? ''
-      const city = address.city || address.town || address.village || address.county || address.state_district || address.state || 'Bengaluru'
+      const city = address.city || address.town || address.village || address.county || address.state_district || address.state || ''
       const landmark = address.neighbourhood || address.suburb || address.hamlet || address.village || address.town || address.city_district || ''
       return {
         displayName: json.display_name ?? '',
@@ -177,15 +178,15 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
       area: chosenArea || prev.area,
       pinCode: chosenPin || prev.pinCode,
       city: geoResult?.city || prev.city,
-      landmark: prev.landmark || geoResult?.landmark || prev.landmark
+      landmark: prev.landmark || geoResult?.landmark || prev.landmark,
+      capturedAddress: prev.capturedAddress
     }))
 
-    if (chosenArea && chosenPin) {
-      setLocationMessage(`Location captured: ${chosenArea} — PIN ${chosenPin}`)
+    if (geoResult?.displayName) {
+      setLocationMessage(`Location captured: ${geoResult.displayName}`)
       setLocationError('')
-    } else if (geoResult?.displayName) {
-      const summaryParts = [geoResult.street, geoResult.areaName, geoResult.city, geoResult.pin].filter(Boolean)
-      setLocationMessage(`Address found: ${summaryParts.join(', ')}`)
+    } else if (chosenArea && chosenPin) {
+      setLocationMessage(`Location captured: ${chosenArea} — PIN ${chosenPin}`)
       setLocationError('')
     } else if (nearestArea) {
       setLocationMessage(`Location detected: ${getAreaName(nearestArea)} — PIN ${getAreaPinCode(nearestArea)}`)
@@ -569,7 +570,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                     </div>
                     <div className="field-row three">
                       <div className="field">
-                        <label htmlFor="area" className="required">Area / locality (Bengaluru)</label>
+                        <label htmlFor="area" className="required">Area / locality</label>
                         <select
                           id="area"
                           required
