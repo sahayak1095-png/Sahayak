@@ -79,12 +79,122 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
 
   useEffect(() => {
     if (step === 3) {
-      setTimeout(() => initMap(), 100)
+      const timer = window.setTimeout(() => initMap(), 100)
+      return () => window.clearTimeout(timer)
+    }
+
+    return () => {
+      if (window.__leafletMap) {
+        window.__leafletMap.remove()
+        window.__leafletMap = null
+        window.__leafletMarker = null
+      }
     }
   }, [step])
 
   const getAreaName = (a: any) => a?.areaName ?? a?.area ?? a?.name ?? ''
-  const getAreaKey = (a: any) => a?.id ?? a?.pinCode ?? getAreaName(a)
+  const getAreaPinCode = (a: any) => a?.pinCode ?? a?.pin ?? ''
+  const getAreaKey = (a: any) => a?.id ?? getAreaPinCode(a) ?? getAreaName(a)
+  const getDistanceSq = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const dLat = lat1 - lat2
+    const dLng = lng1 - lng2
+    return dLat * dLat + dLng * dLng
+  }
+
+  const findNearestArea = (latitude: number, longitude: number) => {
+    let nearest: AreaCoordinate | null = null
+    let bestDist = Infinity
+    for (const area of areas) {
+      const dist = getDistanceSq(latitude, longitude, area.latitude, area.longitude)
+      if (dist < bestDist) {
+        bestDist = dist
+        nearest = area
+      }
+    }
+    // if the nearest area is within a reasonable distance (~2km), use it
+    return bestDist <= 0.02 * 0.02 ? nearest : null
+  }
+
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    try {
+      const params = new URLSearchParams({
+        format: 'jsonv2',
+        lat: latitude.toString(),
+        lon: longitude.toString(),
+        addressdetails: '1',
+        zoom: '18'
+      })
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
+        headers: {
+          'Accept-Language': 'en-US,en;q=0.9',
+          'User-Agent': 'Sahayak/1.0 (sahayak.local)'
+        }
+      })
+      if (!response.ok) throw new Error('Reverse geocode failed')
+      const json = await response.json()
+      const address = json.address ?? {}
+      const street = [
+        address.house_number,
+        address.road,
+        address.pedestrian,
+        address.footway,
+        address.cycleway,
+        address.path,
+        address.residential
+      ].filter(Boolean).join(' ').trim()
+      const building = address.building || address.housename || address.house || address.apartment || address.office || address.shop || address.amenity || ''
+      const areaName = address.suburb || address.neighbourhood || address.village || address.town || address.hamlet || address.city_district || address.district || address.county || address.state_district || address.state || ''
+      const pin = address.postcode ?? ''
+      const city = address.city || address.town || address.village || address.county || address.state_district || address.state || 'Bengaluru'
+      const landmark = address.neighbourhood || address.suburb || address.hamlet || address.village || address.town || address.city_district || ''
+      return {
+        displayName: json.display_name ?? '',
+        street,
+        building,
+        areaName,
+        pin,
+        city,
+        landmark
+      }
+    } catch (err) {
+      console.warn('Reverse geocode failed', err)
+      return null
+    }
+  }
+
+  const updateLocationFromCoords = async (latitude: number, longitude: number) => {
+    const nearestArea = findNearestArea(latitude, longitude)
+    const geoResult = await reverseGeocode(latitude, longitude)
+    const chosenArea = geoResult?.areaName || (nearestArea ? getAreaName(nearestArea) : '')
+    const chosenPin = geoResult?.pin || (nearestArea ? getAreaPinCode(nearestArea) : '')
+
+    setFormData(prev => ({
+      ...prev,
+      latitude,
+      longitude,
+      street: geoResult?.street || prev.street,
+      building: geoResult?.building || prev.building,
+      area: chosenArea || prev.area,
+      pinCode: chosenPin || prev.pinCode,
+      city: geoResult?.city || prev.city,
+      landmark: prev.landmark || geoResult?.landmark || prev.landmark
+    }))
+
+    if (chosenArea && chosenPin) {
+      setLocationMessage(`Location captured: ${chosenArea} — PIN ${chosenPin}`)
+      setLocationError('')
+    } else if (geoResult?.displayName) {
+      const summaryParts = [geoResult.street, geoResult.areaName, geoResult.city, geoResult.pin].filter(Boolean)
+      setLocationMessage(`Address found: ${summaryParts.join(', ')}`)
+      setLocationError('')
+    } else if (nearestArea) {
+      setLocationMessage(`Location detected: ${getAreaName(nearestArea)} — PIN ${getAreaPinCode(nearestArea)}`)
+      setLocationError('')
+    } else {
+      setLocationMessage('Location captured. Please confirm the address details.')
+    }
+  }
+
   const initMap = () => {
     if (!window.L || !document.getElementById('mapPicker')) return
     if (window.__leafletMap) {
@@ -93,21 +203,23 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
       return
     }
 
-    const map = window.L.map('mapPicker').setView(BLR_CENTER, 12)
+    const initialLat = formData.latitude || BLR_CENTER[0]
+    const initialLng = formData.longitude || BLR_CENTER[1]
+    const map = window.L.map('mapPicker').setView([initialLat, initialLng], 14)
     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 18
     }).addTo(map)
 
-    const marker = window.L.marker(BLR_CENTER, { draggable: true }).addTo(map)
+    const marker = window.L.marker([initialLat, initialLng], { draggable: true }).addTo(map)
 
-    marker.on('drag', (e: any) => {
-      updateMapReadout(e.target.getLatLng())
+    marker.on('dragend', async (e: any) => {
+      await updateLocationFromCoords(e.target.getLatLng().lat, e.target.getLatLng().lng)
     })
 
-    map.on('click', (e: any) => {
+    map.on('click', async (e: any) => {
       marker.setLatLng(e.latlng)
-      updateMapReadout(e.latlng)
+      await updateLocationFromCoords(e.latlng.lat, e.latlng.lng)
     })
 
     window.__leafletMap = map
@@ -118,9 +230,24 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
   }
 
   const updateMapReadout = (latlng: any) => {
-    const lat = latlng.lat || latlng[0]
-    const lng = latlng.lng || latlng[1]
-    setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }))
+    const lat = latlng.lat ?? latlng[0]
+    const lng = latlng.lng ?? latlng[1]
+    const nearestArea = findNearestArea(lat, lng)
+
+    setFormData(prev => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+      area: nearestArea ? getAreaName(nearestArea) : prev.area,
+      pinCode: nearestArea ? getAreaPinCode(nearestArea) : prev.pinCode
+    }))
+
+    if (nearestArea) {
+      setLocationMessage(`Location detected: ${getAreaName(nearestArea)} — PIN ${getAreaPinCode(nearestArea)}`)
+      setLocationError('')
+    } else {
+      setLocationMessage('Location captured. Please confirm the correct area and PIN.')
+    }
   }
 
   const applyAreaSelection = (area: AreaCoordinate) => {
@@ -130,7 +257,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
       updateMapReadout({ lat: area.latitude, lng: area.longitude })
     }
     const name = getAreaName(area)
-    const pin = area.pinCode ?? (area as any).pin ?? ''
+    const pin = getAreaPinCode(area)
     setFormData(prev => ({ ...prev, area: name, pinCode: pin }))
     setLocationError('')
   }
@@ -143,34 +270,16 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
 
     setLocationError('Locating you...')
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const latitude = position.coords.latitude
         const longitude = position.coords.longitude
 
         if (window.__leafletMap && window.__leafletMarker) {
           window.__leafletMap.setView([latitude, longitude], 14)
           window.__leafletMarker.setLatLng([latitude, longitude])
-          updateMapReadout({ lat: latitude, lng: longitude })
         }
 
-        const nearbyArea = areas.find(a =>
-          Math.abs(a.latitude - latitude) < 0.01 && Math.abs(a.longitude - longitude) < 0.01
-        )
-
-        setFormData(prev => ({
-          ...prev,
-          area: nearbyArea ? getAreaName(nearbyArea) : prev.area,
-          pinCode: nearbyArea ? nearbyArea.pinCode : prev.pinCode,
-          latitude,
-          longitude
-        }))
-
-        setLocationError('')
-        setLocationMessage(
-          nearbyArea
-            ? `Location detected: ${getAreaName(nearbyArea)} — PIN ${nearbyArea.pinCode}`
-            : `Location detected. Please confirm the correct PIN after submitting.`
-        )
+        await updateLocationFromCoords(latitude, longitude)
       },
       (error) => {
         setLocationError('Unable to locate you. Please allow location access and try again.')
@@ -261,6 +370,11 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
     }
     if (s === 4) {
       if (!formData.category) nextErrors['category'] = 'Please select a category'
+      if (formData.category && pickedServices.length === 0) nextErrors['services'] = 'Choose at least one task'
+    }
+    if (s === 5) {
+      if (!formData.preferredDate) nextErrors['preferredDate'] = 'Preferred date is required'
+      if (!formData.preferredTime) nextErrors['preferredTime'] = 'Preferred time is required'
     }
 
     setErrors(nextErrors)
@@ -290,11 +404,19 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
     const ok4 = ((): boolean => {
       const e: Record<string,string> = {}
       if (!formData.category) e['category'] = 'Please select a category'
+      if (formData.category && pickedServices.length === 0) e['services'] = 'Choose at least one task'
+      setErrors(prev => ({ ...prev, ...e }))
+      return Object.keys(e).length === 0
+    })()
+    const ok5 = ((): boolean => {
+      const e: Record<string,string> = {}
+      if (!formData.preferredDate) e['preferredDate'] = 'Preferred date is required'
+      if (!formData.preferredTime) e['preferredTime'] = 'Preferred time is required'
       setErrors(prev => ({ ...prev, ...e }))
       return Object.keys(e).length === 0
     })()
 
-    return ok1 && ok2 && ok4
+    return ok1 && ok2 && ok4 && ok5
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -353,7 +475,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                       </div>
                     </div>
                     <div className="field">
-                      <label htmlFor="name">Full name</label>
+                      <label htmlFor="name" className="required">Full name</label>
                       <input
                         id="name"
                         name="name"
@@ -367,7 +489,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                       )}
                     </div>
                     <div className="field">
-                      <label htmlFor="phone">Phone number</label>
+                      <label htmlFor="phone" className="required">Phone number</label>
                       <input
                         id="phone"
                         name="phone"
@@ -403,7 +525,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                     </div>
                     <div className="field-row">
                       <div className="field">
-                        <label htmlFor="floor">Flat / floor no.</label>
+                        <label htmlFor="floor" className="required">Flat / floor no.</label>
                         <input
                           id="floor"
                           name="floor"
@@ -417,7 +539,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                         )}
                       </div>
                       <div className="field">
-                        <label htmlFor="building">Building / house name</label>
+                        <label htmlFor="building" className="required">Building / house name</label>
                         <input
                           id="building"
                           name="building"
@@ -432,7 +554,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                       </div>
                     </div>
                     <div className="field">
-                      <label htmlFor="street">Street / road</label>
+                      <label htmlFor="street" className="required">Street / road</label>
                       <input
                         id="street"
                         name="street"
@@ -447,7 +569,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                     </div>
                     <div className="field-row three">
                       <div className="field">
-                        <label htmlFor="area">Area / locality (Bengaluru)</label>
+                        <label htmlFor="area" className="required">Area / locality (Bengaluru)</label>
                         <select
                           id="area"
                           required
@@ -469,7 +591,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                         )}
                       </div>
                       <div className="field">
-                        <label htmlFor="city">City</label>
+                        <label htmlFor="city" className="required">City</label>
                         <input
                           id="city"
                           name="city"
@@ -482,7 +604,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                           )}
                       </div>
                       <div className="field">
-                        <label htmlFor="pinCode">PIN code</label>
+                        <label htmlFor="pinCode" className="required">PIN code</label>
                         <input
                           id="pinCode"
                           name="pinCode"
@@ -558,7 +680,9 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                     <div className="map-picker" id="mapPicker"></div>
                     <div className="map-actions">
                       <span className="map-readout">
-                        📍 Latitude: {formData.latitude?.toFixed(4)}, Longitude: {formData.longitude?.toFixed(4)}
+                        {formData.area
+                          ? `📍 ${formData.area}${formData.pinCode ? ` — PIN ${formData.pinCode}` : ''}`
+                          : '📍 No captured address yet. Use Locate me to capture your current area.'}
                       </span>
                     </div>
                     <div className="wizard-actions">
@@ -583,7 +707,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                       </div>
                     </div>
                     <div className="field">
-                      <label htmlFor="category">Category needed</label>
+                      <label htmlFor="category" className="required">Category needed</label>
                       <select
                         id="category"
                         required
@@ -602,7 +726,7 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                       )}
                     </div>
                     <div className="field">
-                      <label>Specific tasks (optional)</label>
+                      <label>Specific tasks</label>
                       {currentCategory ? (
                         <div className="service-chips">
                           {currentCategory.items.map((item, idx) => (
@@ -619,6 +743,13 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                       ) : (
                         <span className="hint">Choose a category to see options</span>
                       )}
+                      {errors.services && (
+                        <div style={{ color: 'var(--marigold)', fontSize: '12px', marginTop: '6px' }}>{errors.services}</div>
+                      )}
+                    </div>
+                    <div className="fee-note">
+                      <div className="icon">💳</div>
+                      <div>Only a service fee will be charged after task completion — no hidden fees, no extra markups.</div>
                     </div>
                     <div className="wizard-actions">
                       <button type="button" className="btn-back" onClick={() => goStep(3)}>
@@ -639,24 +770,32 @@ export default function RegisterPage({ onNavigate, onConfirm, initialService, in
                     <p className="sub">Rough timing is fine — we'll confirm exact timing on the call.</p>
                     <div className="field-row">
                       <div className="field">
-                        <label htmlFor="date">Preferred date</label>
+                        <label htmlFor="date" className="required">Preferred date</label>
                         <input
                           id="date"
                           name="preferredDate"
                           type="date"
+                          required
                           value={formData.preferredDate}
                           onChange={handleInputChange}
                         />
+                        {errors.preferredDate && (
+                          <div style={{ color: 'var(--marigold)', fontSize: '12px', marginTop: '6px' }}>{errors.preferredDate}</div>
+                        )}
                       </div>
                       <div className="field">
-                        <label htmlFor="time">Preferred time</label>
+                        <label htmlFor="time" className="required">Preferred time</label>
                         <input
                           id="time"
                           name="preferredTime"
                           type="time"
+                          required
                           value={formData.preferredTime}
                           onChange={handleInputChange}
                         />
+                        {errors.preferredTime && (
+                          <div style={{ color: 'var(--marigold)', fontSize: '12px', marginTop: '6px' }}>{errors.preferredTime}</div>
+                        )}
                       </div>
                     </div>
                     <div className="field">

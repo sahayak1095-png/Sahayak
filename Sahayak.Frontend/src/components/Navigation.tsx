@@ -1,65 +1,76 @@
 import { useState } from 'react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface NavigationProps {
   currentPage: string
   onPageChange: (page: string) => void
 }
 
-const LANGUAGE_OPTIONS = [
-  { value: 'en', label: 'English' },
-  { value: 'kn', label: 'Kannada' }
+const MENU_OPTIONS = [
+  { page: 'home', labelKey: 'nav.home' },
+  { page: 'services', labelKey: 'nav.services' },
+  { page: 'register', labelKey: 'nav.register' },
+  { page: 'admin', labelKey: 'nav.admin' }
 ]
 
 export default function Navigation({ currentPage, onPageChange }: NavigationProps) {
-  const [language, setLanguage] = useState('en')
+  const { lang, setLang, t } = useLanguage()
+  const [navOpen, setNavOpen] = useState(false)
+
+  const handleNavigate = (page: string) => {
+    onPageChange(page)
+    setNavOpen(false)
+  }
 
   return (
     <div className="nav">
       <button className="brand" onClick={() => onPageChange('home')}>
         <div className="brand-mark">ಸ</div>
-        <div>
-          <span className="brand-name">Sahayak</span>
-          <span className="brand-sub">your everyday helper</span>
+        <div className="brand-copy">
+          <span className="brand-name">{t('brand.name')}</span>
+          <span className="brand-sub">{t('brand.sub')}</span>
         </div>
       </button>
-      <div className="nav-links">
-        <button 
-          className={`navlink ${currentPage === 'home' ? 'on' : ''}`}
-          onClick={() => onPageChange('home')}
+
+      {/* center graphic removed — moved to right side */}
+
+      <div className="controls">
+        <button
+          className={`hamburger ${navOpen ? 'open' : ''}`}
+          aria-label={t('nav.menu')}
+          aria-expanded={navOpen}
+          aria-controls="main-nav"
+          onClick={() => setNavOpen(o => !o)}
         >
-          Home
+          <span className="menu-icon">☰</span>
+          <span className="menu-label">{t('nav.menu')}</span>
         </button>
-        <button 
-          className={`navlink ${currentPage === 'services' ? 'on' : ''}`}
-          onClick={() => onPageChange('services')}
-        >
-          Services
-        </button>
-        <button 
-          className={`navlink ${currentPage === 'register' ? 'on' : ''}`}
-          onClick={() => onPageChange('register')}
-        >
-          Register
-        </button>
-        <button 
-          className="nav-admin"
-          onClick={() => onPageChange('admin')}
-        >
-          Admin
-        </button>
-      </div>
-      <div className="language-picker">
-        <select value={language} onChange={(e) => setLanguage(e.target.value)} aria-label="Select language">
-          {LANGUAGE_OPTIONS.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
+
+        <div className={`nav-links ${navOpen ? 'open' : ''}`} id="main-nav">
+          {MENU_OPTIONS.map(option => (
+            <button
+              key={option.page}
+              className={`navlink ${currentPage === option.page ? 'on' : ''}`}
+              onClick={() => handleNavigate(option.page)}
+            >
+              {t(option.labelKey)}
+            </button>
           ))}
-        </select>
+        </div>
+
+        <button className="nav-cta" onClick={() => handleNavigate('about')}>
+          {t('nav.about')}
+        </button>
+
+        <div className="language-picker">
+          <select value={lang} onChange={(e) => setLang(e.target.value as 'en' | 'kn')} aria-label="Select language">
+            <option value="en">English</option>
+            <option value="kn">Kannada</option>
+          </select>
+        </div>
       </div>
-      <button className="nav-cta" onClick={() => onPageChange('about')}>
-        About Us
-      </button>
+
+      {/* mobile/menu handled by the .nav-links inside .controls */}
     </div>
   )
 }

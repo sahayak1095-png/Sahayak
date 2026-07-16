@@ -1,9 +1,12 @@
+import { useLanguage } from '../contexts/LanguageContext'
+
 interface ConfirmationPageProps {
   data: any
   onNavigate: (page: string) => void
 }
 
 export default function ConfirmationPage({ data, onNavigate }: ConfirmationPageProps) {
+  const { t } = useLanguage()
   const referenceId = data?.referenceId || 'SHK-000000'
 
   return (
@@ -16,29 +19,29 @@ export default function ConfirmationPage({ data, onNavigate }: ConfirmationPageP
                 <path d="M4 12l5 5L20 6"/>
               </svg>
             </div>
-            <h2 style={{ color: '#F7F5EF' }}>Request received</h2>
+            <h2 style={{ color: '#F7F5EF' }}>{t('confirm.heading')}</h2>
             <p className="confirm-note">
-              We’ve captured your details. A helper will review this request and reach out to confirm the schedule.
+              {t('confirm.body')}
             </p>
             <div className="fee-note" style={{ marginBottom: '12px' }}>
               <div className="icon">💳</div>
-              <div>Only a service fee was charged — no hidden fees, no extra markups.</div>
+              <div>{t('confirm.fee')}</div>
             </div>
             <p className="confirm-reference">
-              Reference <span className="mono">{referenceId}</span>
+              {t('confirm.reference')} <span className="mono">{referenceId}</span>
             </p>
             <div className="timeline">
               <div className="tl-step complete">
                 <div className="tl-dot"></div>
-                <div className="tl-label">Under review</div>
+                <div className="tl-label">{t('confirm.round1')}</div>
               </div>
               <div className="tl-step upcoming">
                 <div className="tl-dot"></div>
-                <div className="tl-label">Helper assigned</div>
+                <div className="tl-label">{t('confirm.round2')}</div>
               </div>
               <div className="tl-step upcoming">
                 <div className="tl-dot"></div>
-                <div className="tl-label">Confirmation call</div>
+                <div className="tl-label">{t('confirm.round3')}</div>
               </div>
             </div>
             <div className="confirm-actions">
@@ -47,10 +50,10 @@ export default function ConfirmationPage({ data, onNavigate }: ConfirmationPageP
                 style={{ color: '#F7F5EF', borderColor: 'rgba(247,245,239,0.3)', background: 'transparent' }}
                 onClick={() => onNavigate('register')}
               >
-                Register another request
+                {t('confirm.btnRegister')}
               </button>
               <button className="btn-primary" onClick={() => onNavigate('home')}>
-                Back to home
+                {t('confirm.btnHome')}
               </button>
             </div>
           </div>

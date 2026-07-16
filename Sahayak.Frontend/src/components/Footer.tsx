@@ -1,7 +1,11 @@
+import { useLanguage } from '../contexts/LanguageContext'
+
 export default function Footer() {
+  const { t } = useLanguage()
+
   return (
     <footer>
-      Sahayak · doorstep help, arranged simply.
+      {t('footer.text')}
     </footer>
   )
 }

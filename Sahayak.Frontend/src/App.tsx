@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { LanguageProvider } from './contexts/LanguageContext'
 import Navigation from './components/Navigation'
 import HomePage from './pages/HomePage'
 import AboutPage from './pages/AboutPage'
@@ -31,10 +32,11 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
-      
-      <main>
+    <LanguageProvider>
+      <div className="app">
+        <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
+        
+        <main>
         {currentPage === 'home' && <HomePage onNavigate={setCurrentPage} />}
         {currentPage === 'about' && <AboutPage />}
         {currentPage === 'services' && <ServicesPage onNavigate={navigateTo} />}
@@ -45,6 +47,7 @@ function App() {
 
       <Footer />
     </div>
+    </LanguageProvider>
   )
 }
 

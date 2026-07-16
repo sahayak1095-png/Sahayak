@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useLanguage } from '../contexts/LanguageContext'
 import { categoriesAPI, logsAPI, ServiceCategory, ServiceLog } from '../services/api'
 
 interface HomePageProps {
   onNavigate: (page: string) => void
 }
 
-const PHRASES = ["the RTO queue.", "a medicine pickup.", "the evening walk.", "a deep clean.", "moving day chaos."]
+const PHRASE_KEYS = ['home.phrase1', 'home.phrase2', 'home.phrase3', 'home.phrase4', 'home.phrase5']
 const ICONS: Record<string, string> = {
   errand: '🚗',
   heart: '❤️',
@@ -34,15 +35,34 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   const [categories, setCategories] = useState<ServiceCategory[]>([])
   const [logs, setLogs] = useState<ServiceLog[]>([])
 
-  // Animate kinetic text
+  const useCountUp = (target: number, duration = 1200) => {
+    const [value, setValue] = useState(0)
+    useEffect(() => {
+      let raf = 0
+      let start: number | null = null
+      const step = (ts: number) => {
+        if (start === null) start = ts
+        const progress = Math.min((ts - start) / duration, 1)
+        setValue(Math.round(progress * target))
+        if (progress < 1) raf = requestAnimationFrame(step)
+      }
+      raf = requestAnimationFrame(step)
+      return () => cancelAnimationFrame(raf)
+    }, [target, duration])
+    return value
+  }
+
+  const requestsCount = useCountUp(5, 1500)
+  const helpersCount = useCountUp(12, 1200)
+  const neighborhoodsCount = useCountUp(10, 900)
+
   useEffect(() => {
     const interval = setInterval(() => {
-      setKineticIndex(i => (i + 1) % PHRASES.length)
+      setKineticIndex(i => (i + 1) % PHRASE_KEYS.length)
     }, 2600)
     return () => clearInterval(interval)
   }, [])
 
-  // Update clock
   useEffect(() => {
     const interval = setInterval(() => {
       setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
@@ -50,7 +70,6 @@ export default function HomePage({ onNavigate }: HomePageProps) {
     return () => clearInterval(interval)
   }, [])
 
-  // Fetch data
   useEffect(() => {
     Promise.all([
       categoriesAPI.getAll(),
@@ -63,49 +82,57 @@ export default function HomePage({ onNavigate }: HomePageProps) {
     })
   }, [])
 
+  const { t } = useLanguage()
+  const phrases = PHRASE_KEYS.map(key => t(key))
+
   return (
     <section className="page active">
       <div className="hero">
         <div className="mesh"></div>
         <div className="wrap hero-inner">
           <div>
-            <div className="eyebrow">
+            <p className="hero-topline">{t('home.topline')}</p>
+            <div className="eyebrow eyebrow-pill">
               <span className="dot"></span>
-              329 services · 20 categories · Bengaluru
+              {t('home.servicesLabel')}
             </div>
             <h1>
-              Someone to handle<br/>
-              <span className="kinetic">{PHRASES[kineticIndex]}</span>
+              {t('home.hero')}<br />
+              <span className="kinetic">{phrases[kineticIndex]}</span>
             </h1>
-            <p className="lede">
-              Tell Sahayak what you need. A verified helper takes it from there — while you get your time back.
-            </p>
+            <p className="lede">{t('home.tagline')}</p>
             <div className="hero-actions">
               <button className="btn-primary" onClick={() => onNavigate('register')}>
-                Register a request
+                {t('home.btnRegister')}
               </button>
               <button className="btn-ghost" onClick={() => onNavigate('services')}>
-                Browse services
+                {t('home.btnBrowse')}
               </button>
             </div>
-            <div className="stats-row">
-              <div className="stat">
-                <b>12,400+</b>
-                <span>requests handled</span>
-              </div>
-              <div className="stat">
-                <b>480</b>
-                <span>verified helpers</span>
-              </div>
-              <div className="stat">
-                <b>35</b>
-                <span>neighborhoods covered</span>
+            <div className="fee-note" style={{ marginTop: '18px' }}>
+              <div className="icon">💳</div>
+              <div>{t('home.fee')}</div>
+            </div>
+            <div className="hero-stats-card">
+              <div className="stats-row">
+                <div className="stat">
+                  <b className="stat-count">{new Intl.NumberFormat().format(requestsCount)}+</b>
+                  <span>{t('home.stats.requests')}</span>
+                </div>
+                <div className="stat">
+                  <b className="stat-count">{helpersCount}</b>
+                  <span>{t('home.stats.helpers')}</span>
+                </div>
+                <div className="stat">
+                  <b className="stat-count">{neighborhoodsCount}</b>
+                  <span>{t('home.stats.neighborhoods')}</span>
+                </div>
               </div>
             </div>
           </div>
           <div className="panel">
             <div className="panel-head">
-              <span><span className="live-dot"></span>Live requests</span>
+              <span><span className="live-dot"></span>{t('home.liveRequests')}</span>
               <span className="mono">{time}</span>
             </div>
             <div>
@@ -121,30 +148,30 @@ export default function HomePage({ onNavigate }: HomePageProps) {
       </div>
 
       <div className="section">
-        <div className="wrap">
-          <div className="section-head">
-            <div className="eyebrow">
+        <div className="wrap wide-section">
+          <div className="section-head large">
+            <div className="eyebrow pill-large">
               <span className="dot"></span>
-              A taste of what's covered
+              {t('home.coveredHeading')}
             </div>
-            <h2>Twenty categories, three hundred twenty-nine everyday tasks</h2>
-            <p>From queueing at the RTO to move-in planning and document support.</p>
+            <h2 className="large-heading">{t('home.categoryHeading')}</h2>
+            <p className="muted-lede">{t('home.categories')}</p>
           </div>
-          <div className="mini-cats">
+          <div className="mini-cats grid-large">
             {categories.slice(0, 5).map(cat => (
               <button
                 key={cat.id}
-                className="mini-cat"
+                className="mini-cat tile"
                 type="button"
                 onClick={() => onNavigate('services')}
               >
-                <div className="ic">{ICONS[cat.icon] || '•'}</div>
+                <div className="ic large-ic">{ICONS[cat.icon] || '•'}</div>
                 <h4>{cat.name}</h4>
               </button>
             ))}
           </div>
           <button className="see-all" onClick={() => onNavigate('services')}>
-            See all categories & tasks →
+            {t('home.seeAll')}
           </button>
         </div>
       </div>
